@@ -1,7 +1,7 @@
 class APIError extends Error {
     constructor(
+        statusCode,
         message,
-        statusCode = httpStatus.INTERNAL_SERVER_ERROR,
         errors = [],
         stack = ""
     ) {
