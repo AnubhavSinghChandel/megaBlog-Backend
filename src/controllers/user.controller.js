@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 import { APIError } from "../utils/APIError.js"
 import { APIResponse } from "../utils/APIResponse.js"
 import { User } from "../models/user.model.js"
+import { isValidObjectId } from "mongoose"
 
 const cookieOptions = {
     httpOnly: true,
@@ -11,10 +12,10 @@ const cookieOptions = {
 const generateRefreshAccessToken = async (userId) => {
 
     try {
-        const user = User.find(userId)
+        const user = await User.findById(userId)
 
+        const accessToken = user.generateAcccessToken()
         const refreshToken = user.generateRefreshToken()
-        const accessToken = user.generateAccessToken()
 
         user.refreshToken = refreshToken
 
@@ -72,7 +73,9 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const { email, username, password } = req.body
 
-    if (!(email && username)) {
+    console.log(req.body);
+
+    if (!(email || username)) {
         throw new APIError(400, "Email or password required!")
     }
 
@@ -107,7 +110,106 @@ const loginUser = asyncHandler(async (req, res) => {
 
 })
 
+const logoutUser = asyncHandler(async (req, res) => {
+
+    const { userId } = req.user._id
+
+    if (!isValidObjectId(userId)) {
+        throw new APIError(400, "Invalid User ID!")
+    }
+
+    try {
+        await User.findByIdAndUpdate(
+            userId,
+            {
+                $unset: {
+                    refreshToken: 1
+                }
+            },
+        )
+    } catch (error) {
+        throw new APIError(500, error.message)
+    }
+
+    res.status(200)
+        .clearCookie("accessToken", cookieOptions)
+        .clearCookie("refreshToken", cookieOptions)
+        .json(new APIResponse(200, {}, "User logged out successfully!"))
+
+})
+
+const getCurrentUser = (req, res) => {
+    return res.status(200)
+        .json(new APIResponse(200, req.user, "User fetched successfully!"))
+}
+
+const updatePassword = asyncHandler(async (req, res) => {
+
+    const { userId } = req.user._id
+    const { oldPassword, newPassword } = req.body
+
+    if (!oldPassword) {
+        throw new APIError(400, "Old password is required!")
+    }
+
+    if (!password) {
+        throw new APIError(400, "Password is required!")
+    }
+
+    const user = await User.findById(userId)
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+    if (!isPasswordCorrect) {
+        throw new APIError(400, "Invalid Password!")
+    }
+
+    try {
+        user.password = newPassword
+        await user.save({ validateBeforeSave: false })
+    } catch (error) {
+        throw new APIError(500, error.message)
+    }
+
+    return res.status(200)
+        .json("Password updated successfully!")
+
+})
+
+const updateUserDetails = asyncHandler(async (req, res) => {
+
+    const { email, fullName } = req.body
+    const { userId } = req.user._id
+
+    if (!email) {
+        throw new APIError(400, "Email required!")
+    }
+
+    if (!fullName) {
+        throw new APIError(400, "Full Name required!")
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        {
+            email,
+            fullName
+        },
+        {
+            new: true
+        }
+    ).select("-password -refreshToken")
+
+    return res.status(200)
+        .json(new APIResponse(200, updatedUser, "User details updated successfully!"))
+
+})
+
 export {
     registerUser,
-    loginUser
+    loginUser,
+    logoutUser,
+    getCurrentUser,
+    updatePassword,
+    updateUserDetails
 }

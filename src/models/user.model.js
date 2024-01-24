@@ -27,9 +27,6 @@ const userSchema = new Schema({
         required: true,
         index: true,
     },
-    avatar: {
-        type: String, // Cloudinary url
-    },
     password: {
         type: String,
         required: [true, "Password is required"],
@@ -75,5 +72,36 @@ userSchema.method({
         )
     }
 })
+
+// userSchema.method("isPasswordCorrect", async function (password) {
+//     return await bcrypt.compare(password, this.password)
+// })
+
+// userSchema.method("generateAcccessToken", function () {
+//     return jwt.sign(
+//         {
+//             id: this._id,
+//             username: this.username,
+//             email: this.email,
+//             fullName: this.fullName,
+//         },
+//         process.env.ACCESS_TOKEN_SECRET,
+//         {
+//             expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
+//         }
+//     )
+// })
+
+// userSchema.method("generateRefreshToken", function () {
+//     return jwt.sign(
+//         {
+//             id: this._id
+//         },
+//         process.env.REFRESH_TOKEN_SECRET,
+//         {
+//             expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+//         }
+//     )
+// })
 
 export const User = mongoose.model("User", userSchema)
