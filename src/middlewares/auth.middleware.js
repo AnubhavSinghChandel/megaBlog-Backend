@@ -20,9 +20,11 @@ const verifyJWT = asyncHandler(async (req, _, next) => {
         throw new APIError(401, error.message)
     }
 
+    // console.log(decodedToken);
+
     const userId = decodedToken.id
 
-    if (isValidObjectId(userId)) {
+    if (!isValidObjectId(userId)) {
         throw new APIError(400, "Invalid User ID!")
     }
 
