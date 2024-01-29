@@ -1,5 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { APIError } from "../utils/APIError.js";
+import mongoose from "mongoose"
 import { APIResponse } from "../utils/APIResponse.js";
 import fs from "fs"
 import { cloudinaryFileUpload } from "../utils/cloudinaryFileUpload.js";
@@ -15,7 +16,9 @@ const createBlog = asyncHandler(async (req, res) => {
         throw new APIError(400, "Featured Image missing!")
     }
 
-    if (!(title || content)) {
+    // console.log(featuredImageLocalFilePath);
+
+    if (!title || !content) {
         fs.unlinkSync(featuredImageLocalFilePath)
         throw new APIError(400, "All fields required!")
     }
@@ -26,7 +29,7 @@ const createBlog = asyncHandler(async (req, res) => {
         cloudinaryFileDetails = await cloudinaryFileUpload(featuredImageLocalFilePath)
     } catch (error) {
         fs.unlinkSync(featuredImageLocalFilePath)
-        throw new APIError(500, error.message)
+        throw new APIError(500, error)
     }
 
     const featuredImage = cloudinaryFileDetails.url;
@@ -62,7 +65,37 @@ const getBlogById = asyncHandler(async (req, res) => {
     let blog
 
     try {
-        blog = await Blog.findById(blogId)
+        blog = await Blog.aggregate([
+            {
+                $match: {
+                    _id: new mongoose.Types.ObjectId(blogId)
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy",
+                    pipeline: [
+                        {
+                            $project: {
+                                username: 1,
+                                email: 1,
+                                fullName: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields: {
+                    createdBy: {
+                        $first: "$createdBy"
+                    }
+                }
+            }
+        ])
     } catch (error) {
         throw new APIError(500, error.message)
     }
@@ -91,7 +124,23 @@ const getAllBlogs = asyncHandler(async (req, res) => {
                     from: "users",
                     localField: "createdBy",
                     foreignField: "_id",
-                    as: "createdBy"
+                    as: "createdBy",
+                    pipeline: [
+                        {
+                            $project: {
+                                username: 1,
+                                email: 1,
+                                fullName: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields: {
+                    createdBy: {
+                        $first: "$createdBy"
+                    }
                 }
             }
         ])

@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs'
+import { APIError } from './APIError.js';
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -19,8 +20,8 @@ const cloudinaryFileUpload = async (localFilePath) => {
         return response
     } catch (error) {
         // console.log(error);
-        fs.unlinkSync(localFilePath) // Remove the locally saved temp file as upload fails
-        return null
+        // fs.unlinkSync(localFilePath) // Remove the locally saved temp file as upload fails
+        throw new APIError(500, error)
     }
 }
 

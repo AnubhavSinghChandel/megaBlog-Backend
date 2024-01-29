@@ -112,11 +112,9 @@ const loginUser = asyncHandler(async (req, res) => {
 
 const logoutUser = asyncHandler(async (req, res) => {
 
-    const { userId } = req.user._id
+    const userId = req.user._id
 
-    if (!isValidObjectId(userId)) {
-        throw new APIError(400, "Invalid User ID!")
-    }
+    console.log(userId);
 
     try {
         await User.findByIdAndUpdate(
@@ -145,18 +143,25 @@ const getCurrentUser = (req, res) => {
 
 const updatePassword = asyncHandler(async (req, res) => {
 
-    const { userId } = req.user._id
+    const userId = req.user._id
+    // console.log(userId);
     const { oldPassword, newPassword } = req.body
+
+    if (!isValidObjectId(userId)) {
+        throw new APIError(400, "Invalid User ID!")
+    }
 
     if (!oldPassword) {
         throw new APIError(400, "Old password is required!")
     }
 
-    if (!password) {
+    if (!newPassword) {
         throw new APIError(400, "Password is required!")
     }
 
     const user = await User.findById(userId)
+
+    // console.log(user);
 
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
@@ -179,7 +184,7 @@ const updatePassword = asyncHandler(async (req, res) => {
 const updateUserDetails = asyncHandler(async (req, res) => {
 
     const { email, fullName } = req.body
-    const { userId } = req.user._id
+    const userId = req.user._id
 
     if (!email) {
         throw new APIError(400, "Email required!")
