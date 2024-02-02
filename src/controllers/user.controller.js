@@ -63,7 +63,8 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new APIError(500, error.message)
     }
 
-    const createdUser = User.findOne({ email }).select("-password -refreshToken")
+    const createdUser = await User.findOne({ email }).select("-password -refreshToken")
+    // console.log(createdUser);
 
     return res.status(200)
         .json(new APIResponse(201, createdUser, "User registered successfully!"))
@@ -73,7 +74,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const { email, username, password } = req.body
 
-    console.log(req.body);
+    // console.log(req.body);
 
     if (!(email || username)) {
         throw new APIError(400, "Email or password required!")

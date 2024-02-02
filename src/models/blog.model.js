@@ -23,6 +23,6 @@ const blogSchema = new Schema({
         required: true,
         trim: true
     },
-})
+}, { timestamps: true })
 
 export const Blog = mongoose.model("Blog", blogSchema)

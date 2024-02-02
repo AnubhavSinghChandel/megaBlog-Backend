@@ -6,10 +6,14 @@ import fs from "fs"
 import { cloudinaryFileUpload } from "../utils/cloudinaryFileUpload.js";
 import { Blog } from "../models/blog.model.js";
 import { isValidObjectId } from "mongoose";
+import { title } from "process";
+import { timeStamp } from "console";
 
 const createBlog = asyncHandler(async (req, res) => {
 
     const { title, content } = req.body;
+    // console.log(req.body)
+    // console.log(req.file);
     const featuredImageLocalFilePath = req.file?.path
 
     if (!featuredImageLocalFilePath) {
@@ -153,9 +157,69 @@ const getAllBlogs = asyncHandler(async (req, res) => {
 
 })
 
+const getUserBlogs = asyncHandler(async (req, res) => {
+
+    const userId = req.user._id
+
+    // console.log(userId);
+
+    let userBlogs
+
+    try {
+        userBlogs = await Blog.aggregate([
+            {
+                $match: {
+                    createdBy: new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy",
+                    pipeline: [
+                        {
+                            $project: {
+                                username: 1,
+                                fullName: 1,
+                                email: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields: {
+                    createdBy: {
+                        $first: "$createdBy"
+                    }
+                }
+            },
+            {
+                $project: {
+                    title: 1,
+                    status: 1,
+                    featuredImage: 1,
+                    createdBy: 1,
+                    createdAt: 1,
+                    updatedAt: 1
+                }
+            }
+        ])
+    } catch (error) {
+        throw new APIError(500, error.message)
+    }
+
+    return res.status(200)
+        .json(new APIResponse(200, userBlogs, "Blogs fetched successfully!"))
+
+})
+
 const updateBlog = asyncHandler(async (req, res) => {
 
     const { blogId } = req.params
+    // console.log(req.body);
     const { title, content } = req.body
 
     if (!isValidObjectId(blogId)) {
@@ -214,7 +278,12 @@ const deleteBlog = asyncHandler(async (req, res) => {
 const updateFeaturedImage = asyncHandler(async (req, res) => {
 
     const { blogId } = req.params
+
     const featuredImageLocalPatch = req.file?.path
+    // console.log(req.file);
+    if (!featuredImageLocalPatch) {
+        throw new APIError(500, "Image not provided!")
+    }
 
     if (!isValidObjectId(blogId)) {
         fs.unlinkSync(featuredImage)
@@ -256,5 +325,6 @@ export {
     getAllBlogs,
     updateBlog,
     deleteBlog,
-    updateFeaturedImage
+    updateFeaturedImage,
+    getUserBlogs
 }
